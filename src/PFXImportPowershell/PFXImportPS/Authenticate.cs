@@ -29,6 +29,7 @@ namespace Microsoft.Management.Powershell.PFXImport
     using System.Diagnostics.CodeAnalysis;
     using System.Security;
     using Microsoft.Identity.Client;
+    using System.Security.Cryptography.X509Certificates;
 
     public class Authenticate
     {
@@ -105,6 +106,47 @@ namespace Microsoft.Management.Powershell.PFXImport
         {
             return (string)modulePrivateData["ClientSecret"];
         }
+        private static string GetCertificateThumbprint(Hashtable modulePrivateData)
+        {
+            return (string)modulePrivateData["CertificateThumbprint"];
+        }
+
+        private static X509Certificate2 GetClientCertificate(Hashtable modulePrivateData)
+        {
+            string thumbprint = GetCertificateThumbprint(modulePrivateData);
+
+            if (string.IsNullOrWhiteSpace(thumbprint))
+            {
+                return null;
+            }
+
+            using (X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
+            {
+                store.Open(OpenFlags.ReadOnly);
+
+                X509Certificate2Collection certificates =
+                    store.Certificates.Find(
+                        X509FindType.FindByThumbprint,
+                        thumbprint,
+                        false);
+
+                if (certificates.Count == 0)
+                {
+                    throw new ArgumentException(
+                        "Certificate specified in CertificateThumbprint was not found in LocalMachine\\My");
+                }
+
+                X509Certificate2 certificate = certificates[0];
+
+                if (!certificate.HasPrivateKey)
+                {
+                    throw new ArgumentException(
+                        "Certificate specified in CertificateThumbprint does not have a private key");
+                }
+
+                return certificate;
+            }
+        }
 
         [SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Justification = "Declaring it as a function helps to test a code path.")]
         [SuppressMessage("Microsoft.Usage", "CA2211:NonConstantFieldsShouldNotBeVisible", Justification = "Needs to be public and can't make functions consts")]
@@ -142,13 +184,24 @@ namespace Microsoft.Management.Powershell.PFXImport
 
         private static IConfidentialClientApplication BuildMSALConfidentialClientApplication(Hashtable modulePrivateData)
         {
-            IConfidentialClientApplication app = ConfidentialClientApplicationBuilder.Create(GetClientId(modulePrivateData))
+            ConfidentialClientApplicationBuilder builder =
+                ConfidentialClientApplicationBuilder.Create(GetClientId(modulePrivateData))
                 .WithAuthority(GetAuthority(modulePrivateData))
                 .WithRedirectUri(GetRedirectUri(modulePrivateData).ToString())
-                .WithTenantId(GetTenantId(modulePrivateData))  
-                .WithClientSecret(GetClientSecret(modulePrivateData))
-                .Build();
-            return app;
+                .WithTenantId(GetTenantId(modulePrivateData));
+
+            X509Certificate2 certificate = GetClientCertificate(modulePrivateData);
+
+            if (certificate != null)
+            {
+                builder = builder.WithCertificate(certificate);
+            }
+            else
+            {
+                builder = builder.WithClientSecret(GetClientSecret(modulePrivateData));
+            }
+
+            return builder.Build();
         }
 
         public static AuthenticationResult GetAuthToken(string user, SecureString password, Hashtable modulePrivateData)
@@ -194,14 +247,23 @@ namespace Microsoft.Management.Powershell.PFXImport
             else
             {
                 string clientSecret = GetClientSecret(modulePrivateData);
-                if (string.IsNullOrWhiteSpace(clientSecret))
+                string certificateThumbprint = GetCertificateThumbprint(modulePrivateData);
+
+                if (string.IsNullOrWhiteSpace(clientSecret) &&
+                    string.IsNullOrWhiteSpace(certificateThumbprint))
                 {
-                    throw new ArgumentException("No authentication method provided.  Specify AdminUserName on command line or ClientSecret setting in module PrivateData.");
+                    throw new ArgumentException(
+                        "No authentication method provided. Specify AdminUserName, ClientSecret or CertificateThumbprint.");
                 }
 
-                if (string.Compare(GetTenantId(modulePrivateData), Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.IsNullOrWhiteSpace(GetTenantId(modulePrivateData)) ||
+                    string.Compare(
+                        GetTenantId(modulePrivateData),
+                        Guid.Empty.ToString(),
+                        StringComparison.OrdinalIgnoreCase) == 0)
                 {
-                    throw new ArgumentException("TenantId must be provided in module PrivateData when authenticating with client secret");
+                    throw new ArgumentException(
+                        "TenantId must be provided in module PrivateData when authenticating as an application.");
                 }
 
                 AuthenticationResult result;
