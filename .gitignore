@@ -289,4 +289,4 @@ __pycache__/
 /src/PFXImportPowershell/PFXImportPS/IntunePfxImport1DF.psd1
 
 # Esment Files
-esment/Import-IxisCertificates/Config/config.psd1
+esment/IntunePfxAutomation/Config/Config.psd1

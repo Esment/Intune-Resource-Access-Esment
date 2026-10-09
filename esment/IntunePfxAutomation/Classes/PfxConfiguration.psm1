@@ -1,4 +1,4 @@
-﻿class IxisConfiguration {
+﻿class PfxConfiguration {
 
     # Entra ID / App Registration
     [string] $ClientId
@@ -9,7 +9,7 @@
     [string] $GroupName
     [string[]] $AllowedDomains
 
-    # Certificado IXIS
+    # Certificado PFX
     [string] $PfxPath
     [string] $PublicKeyPath
 
@@ -17,19 +17,9 @@
     [string] $ProviderName
     [string] $KeyName
     [string] $IntendedPurpose
+    [string] $IntuneModulePath
 
-    IxisConfiguration() {
-
-        $this.GroupName = 'AAD_Certificado Ixis'
-
-        $this.AllowedDomains = @(
-            'esment.org',
-            'amadipesment.org'
-        )
-
-        $this.ProviderName = 'Microsoft Software Key Storage Provider'
-        $this.KeyName = 'PFXEncryptionKey'
-        $this.IntendedPurpose = 'unassigned'
+    PfxConfiguration() {
     }
 
     [void] Validate() {
@@ -51,7 +41,7 @@
         }
 
         if (-not (Test-Path -LiteralPath $this.PfxPath -PathType Leaf)) {
-            throw "No se encuentra el certificado IXIS: $($this.PfxPath)"
+            throw "No se encuentra el certificado PFX: $($this.PfxPath)"
         }
 
         if ([System.String]::IsNullOrWhiteSpace($this.PublicKeyPath)) {
@@ -59,6 +49,14 @@
         }
         if (-not (Test-Path -LiteralPath $this.PublicKeyPath -PathType Leaf)) {
             throw "No se encuentra la clave pública: $($this.PublicKeyPath)"
+        }
+        
+        if ([System.String]::IsNullOrWhiteSpace($this.IntuneModulePath)) {
+            throw 'IntuneModulePath no puede estar vacío.'
+        }
+
+        if (-not (Test-Path -LiteralPath $this.IntuneModulePath -PathType Leaf)) {
+            throw "No se encuentra el módulo IntunePfxImport: $($this.IntuneModulePath)"
         }
     }
 }

@@ -1,10 +1,10 @@
 ﻿
-using module .\IxisConfiguration.psm1
+using module .\PfxConfiguration.psm1
 class EntraService {
 
-    [IxisConfiguration] $Configuration
+    [PfxConfiguration] $Configuration
 
-    EntraService([IxisConfiguration] $Configuration) {
+    EntraService([PfxConfiguration] $Configuration) {
 
         if ($null -eq $Configuration) {
             throw 'Configuration no puede ser null.'
