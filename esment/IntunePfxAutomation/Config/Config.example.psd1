@@ -15,6 +15,7 @@
     IntendedPurpose       = 'unassigned'
 
     PfxPath               = 'C:\IntunePfxImport\certificate.p12'
+    PfxPassword           = ''
     PublicKeyPath         = 'C:\IntunePfxImport\PFXEncryptionKey.cer'
     IntuneModulePath      = 'C:\IntunePFXImport\IntunePfxImport.psd1'
 }

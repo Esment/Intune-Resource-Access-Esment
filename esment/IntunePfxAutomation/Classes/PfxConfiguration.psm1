@@ -11,6 +11,7 @@
 
     # Certificado PFX
     [string] $PfxPath
+    [securestring] $PfxPassword
     [string] $PublicKeyPath
 
     # Intune PFX
