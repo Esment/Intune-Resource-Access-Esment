@@ -7,6 +7,8 @@ using module .\Classes\PfxImportResult.psm1
 using module .\Classes\PfxImportProcessor.psm1
 
 param(
+    [ValidateSet('Import', 'Remove')]
+    [string] $Action = 'Import',
     [switch] $Execute
 )
 
@@ -40,9 +42,53 @@ $processor = [PfxImportProcessor]::new(
     $config,
     $intunePfxService
 )
-Write-Host 'Procesador de importación de certificados inicializado.' -ForegroundColor Cyan
+Write-Host 'Procesador de certificados inicializado.' -ForegroundColor Cyan
 
 try {
+
+    Write-Host 'Conectando a Entra ID via Certificado'
+    $entraService.Connect()
+
+    $group = $entraService.GetGroup()
+    $users = $entraService.GetGroupUsers($group.Id)
+
+    Write-Host "Usuarios obtenidos del grupo: $($users.Count)"
+
+    Write-Host 'Conectando a Intune mediante IntunePfxImport 2.1...'
+    $intunePfxService.Connect()
+
+    switch ($Action) {
+
+        'Import' {
+            Write-Host 'Procesando importación de certificados...' -ForegroundColor Cyan
+            $results = $processor.ProcessUsers(
+                $users,
+                $Execute
+            )
+        }
+
+        'Remove' {
+            Write-Host 'Procesando eliminación de certificados...' -ForegroundColor Cyan
+            $results = $processor.ProcessRemovals(
+                $users,
+                $Execute
+            )
+        }
+    }
+}
+catch {
+    Write-Host "Ocurrió un error: $_" -ForegroundColor Red
+}
+finally {
+    Write-Host 'Desconectando de Intune y Entra ID...' -ForegroundColor Yellow
+    $intunePfxService.Disconnect()
+    $entraService.Disconnect()
+}   
+
+
+
+
+<# try {
     Write-Host 'Conectando a Entra ID via Certificado'
     $entraService.Connect()
     Write-Host 'Autenticación Entra ID correcta.' -ForegroundColor Green
@@ -82,4 +128,4 @@ finally {
     Write-Host 'Desconectando de Intune y Entra ID...' -ForegroundColor Yellow
     $intunePfxService.Disconnect()
     $entraService.Disconnect()
-}
+} #>
