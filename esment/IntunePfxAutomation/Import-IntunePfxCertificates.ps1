@@ -5,6 +5,7 @@ using module .\Classes\EntraService.psm1
 using module .\Classes\IntunePfxService.psm1
 using module .\Classes\PfxImportResult.psm1
 using module .\Classes\PfxImportProcessor.psm1
+using module .\Classes\PfxAuditLogger.psm1
 
 param(
     [ValidateSet('Import', 'Remove')]
@@ -33,15 +34,16 @@ $config.ProviderName = $settings.ProviderName
 $config.KeyName = $settings.KeyName
 $config.IntendedPurpose = $settings.IntendedPurpose
 $config.IntuneModulePath = $settings.IntuneModulePath
-
+$config.LogDirectory = $settings.LogDirectory
 Write-Host 'Inicializando servicios...' -ForegroundColor Cyan
+$logger = [PfxAuditLogger]::new($config)
 $entraService = [EntraService]::new($config)
 $intunePfxService = [IntunePfxService]::new($config)
-Write-Host 'Servicios inicializados.' -ForegroundColor Cyan
 $processor = [PfxImportProcessor]::new(
     $config,
     $intunePfxService
 )
+Write-Host 'Servicios inicializados.' -ForegroundColor Cyan
 Write-Host 'Procesador de certificados inicializado.' -ForegroundColor Cyan
 
 try {
@@ -75,57 +77,14 @@ try {
             )
         }
     }
+    # Registrar cambios reales y errores
+    $logger.Write($Action, $results)
 }
 catch {
-    Write-Host "Ocurrió un error: $_" -ForegroundColor Red
+    Write-Host "Ocurrió un error: $($_.Exception.Message)" -ForegroundColor Red
 }
 finally {
     Write-Host 'Desconectando de Intune y Entra ID...' -ForegroundColor Yellow
     $intunePfxService.Disconnect()
     $entraService.Disconnect()
 }   
-
-
-
-
-<# try {
-    Write-Host 'Conectando a Entra ID via Certificado'
-    $entraService.Connect()
-    Write-Host 'Autenticación Entra ID correcta.' -ForegroundColor Green
-    $group = $entraService.GetGroup()
-    Write-Host "Grupo obtenido: $($group.DisplayName)" -ForegroundColor Green
-    $users = $entraService.GetGroupUsers($group.Id)
-    Write-Host "Usuarios obtenidos del grupo: $($users.Count)" -ForegroundColor Green
-    Write-Host 'Conectando a Intune mediante IntunePfxImport 2.1...'
-    $intunePfxService.Connect()
-    Write-Host "Conexión a Intune establecida correctamente." -ForegroundColor Green
-
-    $results = $processor.ProcessUsers(
-        $users,
-        $Execute
-    )
-    $results |
-    Group-Object Status |
-    Select-Object Name, Count |
-    Format-Table
-
-    $results |
-    Select-Object -First 20 `
-        Timestamp,
-    UserPrincipalName,
-    Status,
-    Detail |
-    Format-Table -AutoSize
-    Write-Host 'Procesamiento de usuarios completado.' -ForegroundColor Green
-
-    $results |
-    Where-Object Status -eq 'Simulation' |
-    Select-Object UserPrincipalName, Status, Detail |
-    Format-Table -AutoSize
-
-}
-finally {
-    Write-Host 'Desconectando de Intune y Entra ID...' -ForegroundColor Yellow
-    $intunePfxService.Disconnect()
-    $entraService.Disconnect()
-} #>

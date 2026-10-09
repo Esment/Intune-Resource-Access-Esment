@@ -18,4 +18,6 @@
     PfxPassword           = ''
     PublicKeyPath         = 'C:\IntunePfxImport\PFXEncryptionKey.cer'
     IntuneModulePath      = 'C:\IntunePFXImport\IntunePfxImport.psd1'
+    
+    LogDirectory = 'C:\Logs\IntunePfxAutomation'
 }

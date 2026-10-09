@@ -1,5 +1,8 @@
 ﻿class PfxConfiguration {
 
+    # Directorio de logs
+    [string] $LogDirectory
+
     # Entra ID / App Registration
     [string] $ClientId
     [string] $TenantId
@@ -58,6 +61,9 @@
 
         if (-not (Test-Path -LiteralPath $this.IntuneModulePath -PathType Leaf)) {
             throw "No se encuentra el módulo IntunePfxImport: $($this.IntuneModulePath)"
+        }
+        if ([System.String]::IsNullOrWhiteSpace($this.LogDirectory)) {
+            throw 'LogDirectory no puede estar vacío.'
         }
     }
 }
