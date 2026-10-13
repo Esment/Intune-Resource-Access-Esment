@@ -16,11 +16,11 @@ param(
 if ($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5) {
     throw 'IntunePfxAutomation requiere Windows PowerShell 5.1.'
 }
-Write-Host 'Iniciando script de importación de certificados PFX...' -ForegroundColor Cyan
+Write-Output 'Iniciando script de importación de certificados PFX...' 
 $settings = Import-PowerShellDataFile `
     -Path "$PSScriptRoot\Config\Config.psd1"
 
-Write-Host 'Cargando configuración...' -ForegroundColor Cyan
+Write-Output 'Cargando configuración...' 
 $config = [PfxConfiguration]::new()
 $config.ClientId = $settings.ClientId
 $config.TenantId = $settings.TenantId
@@ -35,7 +35,7 @@ $config.KeyName = $settings.KeyName
 $config.IntendedPurpose = $settings.IntendedPurpose
 $config.IntuneModulePath = $settings.IntuneModulePath
 $config.LogDirectory = $settings.LogDirectory
-Write-Host 'Inicializando servicios...' -ForegroundColor Cyan
+Write-Output 'Inicializando servicios...' 
 $logger = [PfxAuditLogger]::new($config)
 $entraService = [EntraService]::new($config)
 $intunePfxService = [IntunePfxService]::new($config)
@@ -43,26 +43,26 @@ $processor = [PfxImportProcessor]::new(
     $config,
     $intunePfxService
 )
-Write-Host 'Servicios inicializados.' -ForegroundColor Cyan
-Write-Host 'Procesador de certificados inicializado.' -ForegroundColor Cyan
+Write-Output 'Servicios inicializados.'
+Write-Output 'Procesador de certificados inicializado.' 
 
 try {
 
-    Write-Host 'Conectando a Entra ID via Certificado'
+    Write-Output 'Conectando a Entra ID via Certificado'
     $entraService.Connect()
 
     $group = $entraService.GetGroup()
     $users = $entraService.GetGroupUsers($group.Id)
 
-    Write-Host "Usuarios obtenidos del grupo: $($users.Count)"
+    Write-Output "Usuarios obtenidos del grupo: $($users.Count)"
 
-    Write-Host 'Conectando a Intune mediante IntunePfxImport 2.1...'
+    Write-Output 'Conectando a Intune mediante IntunePfxImport 2.1...'
     $intunePfxService.Connect()
 
     switch ($Action) {
 
         'Import' {
-            Write-Host 'Procesando importación de certificados...' -ForegroundColor Cyan
+            Write-Output 'Procesando importación de certificados...' 
             $results = $processor.ProcessUsers(
                 $users,
                 $Execute
@@ -70,7 +70,7 @@ try {
         }
 
         'Remove' {
-            Write-Host 'Procesando eliminación de certificados...' -ForegroundColor Cyan
+            Write-Output 'Procesando eliminación de certificados...' 
             $results = $processor.ProcessRemovals(
                 $users,
                 $Execute
@@ -81,10 +81,10 @@ try {
     $logger.Write($Action, $results)
 }
 catch {
-    Write-Host "Ocurrió un error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Output "Ocurrió un error: $($_.Exception.Message)" 
 }
 finally {
-    Write-Host 'Desconectando de Intune y Entra ID...' -ForegroundColor Yellow
+    Write-Output 'Desconectando de Intune y Entra ID...' 
     $intunePfxService.Disconnect()
     $entraService.Disconnect()
 }   
