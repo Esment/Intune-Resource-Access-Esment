@@ -95,9 +95,15 @@ class PfxImportProcessor {
 
         $thumbprint = $this.GetPfxThumbprint()
 
-        $existingCertificates = @(
-            $this.IntuneService.GetExistingCertificates()
-        )
+        try {
+            $existingCertificates = @(
+                $this.IntuneService.GetExistingCertificates()
+            )
+        }
+        catch {
+            throw "Error al consultar los certificados existentes para Remove: $($_.Exception.Message)"
+        }
+
 
         foreach ($user in $Users) {
 
@@ -174,91 +180,91 @@ class PfxImportProcessor {
     }
 
     [object[]] ProcessRemovals(
-    [object[]] $Users,
-    [bool] $Execute
-) {
+        [object[]] $Users,
+        [bool] $Execute
+    ) {
 
-    if ($null -eq $Users) {
-        throw 'Users no puede ser null.'
-    }
-
-    $results = [System.Collections.Generic.List[object]]::new()
-
-    $thumbprint = $this.GetPfxThumbprint()
-
-    $existingCertificates = @(
-        $this.IntuneService.GetExistingCertificates()
-    )
-
-    # Crear lista de UPN actualmente autorizados por el grupo
-    $allowedUsers = @{}
-
-    foreach ($user in $Users) {
-
-        if ($this.IsEligibleUser($user)) {
-            $upn = ([string] $user.UserPrincipalName).ToLowerInvariant()
-            $allowedUsers[$upn] = $true
-        }
-    }
-
-    foreach ($certificate in $existingCertificates) {
-
-        # Solo gestionamos certificados correspondientes
-        # al PFX configurado actualmente
-        if ($certificate.Thumbprint -ine $thumbprint) {
-            continue
+        if ($null -eq $Users) {
+            throw 'Users no puede ser null.'
         }
 
-        if (([string] $certificate.IntendedPurpose) -ine $this.Configuration.IntendedPurpose) {
-            continue
+        $results = [System.Collections.Generic.List[object]]::new()
+
+        $thumbprint = $this.GetPfxThumbprint()
+
+        $existingCertificates = @(
+            $this.IntuneService.GetExistingCertificates()
+        )
+
+        # Crear lista de UPN actualmente autorizados por el grupo
+        $allowedUsers = @{}
+
+        foreach ($user in $Users) {
+
+            if ($this.IsEligibleUser($user)) {
+                $upn = ([string] $user.UserPrincipalName).ToLowerInvariant()
+                $allowedUsers[$upn] = $true
+            }
         }
 
-        $upn = ([string] $certificate.UserPrincipalName).ToLowerInvariant()
+        foreach ($certificate in $existingCertificates) {
 
-        # Continúa perteneciendo al grupo
-        if ($allowedUsers.ContainsKey($upn)) {
-            continue
-        }
+            # Solo gestionamos certificados correspondientes
+            # al PFX configurado actualmente
+            if ($certificate.Thumbprint -ine $thumbprint) {
+                continue
+            }
 
-        # Simulación
-        if (-not $Execute) {
+            if (([string] $certificate.IntendedPurpose) -ine $this.Configuration.IntendedPurpose) {
+                continue
+            }
 
-            $results.Add(
-                [PfxImportResult]::new(
-                    $upn,
-                    'SimulationRemove',
-                    'El certificado se eliminaría en una ejecución real.'
+            $upn = ([string] $certificate.UserPrincipalName).ToLowerInvariant()
+
+            # Continúa perteneciendo al grupo
+            if ($allowedUsers.ContainsKey($upn)) {
+                continue
+            }
+
+            # Simulación
+            if (-not $Execute) {
+
+                $results.Add(
+                    [PfxImportResult]::new(
+                        $upn,
+                        'SimulationRemove',
+                        'El certificado se eliminaría en una ejecución real.'
+                    )
                 )
-            )
 
-            continue
-        }
+                continue
+            }
 
-        # Ejecución real
-        try {
+            # Ejecución real
+            try {
 
-            $this.IntuneService.RemoveCertificate($certificate)
+                $this.IntuneService.RemoveCertificate($certificate)
 
-            $results.Add(
-                [PfxImportResult]::new(
-                    $upn,
-                    'Removed',
-                    'Certificado eliminado correctamente.'
+                $results.Add(
+                    [PfxImportResult]::new(
+                        $upn,
+                        'Removed',
+                        'Certificado eliminado correctamente.'
+                    )
                 )
-            )
-        }
-        catch {
+            }
+            catch {
 
-            $results.Add(
-                [PfxImportResult]::new(
-                    $upn,
-                    'Error',
-                    $_.Exception.Message
+                $results.Add(
+                    [PfxImportResult]::new(
+                        $upn,
+                        'Error',
+                        $_.Exception.Message
+                    )
                 )
-            )
+            }
         }
+
+        return $results.ToArray()
     }
-
-    return $results.ToArray()
-}
 }

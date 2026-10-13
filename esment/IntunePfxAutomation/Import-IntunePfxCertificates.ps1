@@ -67,14 +67,51 @@ try {
                 $users,
                 $Execute
             )
-        }
 
+            if ($Execute) {
+                $changedResults = @(
+                    $results | Where-Object { $_.Status -eq 'Imported' }
+                )
+            }
+            else {
+                $changedResults = @(
+                    $results | Where-Object { $_.Status -eq 'Simulation' }
+                )
+            }
+
+            Write-Output ""
+            Write-Output "Cambios detectados: $($changedResults.Count)"
+
+            foreach ($result in $changedResults) {
+                Write-Output " - $($result.UserPrincipalName)"
+            }
+
+        }
         'Remove' {
-            Write-Output 'Procesando eliminación de certificados...' 
+            Write-Output 'Procesando eliminación de certificados...'
+
             $results = $processor.ProcessRemovals(
                 $users,
                 $Execute
             )
+
+            if ($Execute) {
+                $changedResults = @(
+                    $results | Where-Object { $_.Status -eq 'Removed' }
+                )
+            }
+            else {
+                $changedResults = @(
+                    $results | Where-Object { $_.Status -eq 'Simulation' }
+                )
+            }
+
+            Write-Output ""
+            Write-Output "Cambios detectados: $($changedResults.Count)"
+
+            foreach ($result in $changedResults) {
+                Write-Output " - $($result.UserPrincipalName)"
+            }
         }
     }
     # Registrar cambios reales y errores
@@ -82,6 +119,7 @@ try {
 }
 catch {
     Write-Output "Ocurrió un error: $($_.Exception.Message)" 
+    throw
 }
 finally {
     Write-Output 'Desconectando de Intune y Entra ID...' 
