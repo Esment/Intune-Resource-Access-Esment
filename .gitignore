@@ -287,3 +287,6 @@ __pycache__/
 *.odx.cs
 *.xsd.cs
 /src/PFXImportPowershell/PFXImportPS/IntunePfxImport1DF.psd1
+
+# Esment Files
+esment/IntunePfxAutomation/Config/Config.psd1
