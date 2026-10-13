@@ -54,11 +54,11 @@ class PfxAuditLogger {
             return
         }
 
-        $date = Get-Date -Format 'yyyy-MM-dd'
+        $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 
         $logPath = Join-Path `
             -Path $this.Configuration.LogDirectory `
-            -ChildPath "IntunePfxAutomation-$date.csv"
+            -ChildPath "IntunePfxAutomation-$timestamp.csv"
 
         $records = foreach ($result in $auditResults) {
 
