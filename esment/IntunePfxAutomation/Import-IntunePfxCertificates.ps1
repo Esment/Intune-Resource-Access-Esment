@@ -85,6 +85,16 @@ try {
             foreach ($result in $changedResults) {
                 Write-Output " - $($result.UserPrincipalName)"
             }
+            $errors = @(
+                $results | Where-Object { $_.Status -eq 'Error' }
+            )
+
+            Write-Output ""
+            Write-Output "Errores detectados: $($errors.Count)"
+
+            foreach ($result in $errors) {
+                Write-Output " - $($result.UserPrincipalName): $($result.Detail)"
+            }
 
         }
         'Remove' {
@@ -111,6 +121,16 @@ try {
 
             foreach ($result in $changedResults) {
                 Write-Output " - $($result.UserPrincipalName)"
+            }
+            $errors = @(
+                $results | Where-Object { $_.Status -eq 'Error' }
+            )
+
+            Write-Output ""
+            Write-Output "Errores detectados: $($errors.Count)"
+
+            foreach ($result in $errors) {
+                Write-Output " - $($result.UserPrincipalName): $($result.Detail)"
             }
         }
     }
